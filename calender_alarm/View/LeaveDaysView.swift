@@ -23,9 +23,13 @@ struct LeaveDaysView: View {
                     Text("No leave dates yet.").foregroundStyle(.secondary)
                 }
                 ForEach(leaveDays) { leaveDay in
-                    VStack(alignment: .leading) {
-                        Text(leaveDay.date.formatted(date: .long, time: .omitted) + " – " + leaveDay.lastDate.formatted(date: .long, time: .omitted))
-                        Text(leaveDay.note).font(.caption).foregroundStyle(.secondary)
+                    NavigationLink {
+                        EditLeaveView(leaveDay: leaveDay)
+                    } label: {
+                        VStack(alignment: .leading) {
+                            Text(leaveDay.date.formatted(date: .long, time: .omitted) + " – " + leaveDay.lastDate.formatted(date: .long, time: .omitted))
+                            Text(leaveDay.note).font(.caption).foregroundStyle(.secondary)
+                        }
                     }
                 }
                 .onDelete(perform: deleteLeaveDays)
@@ -52,5 +56,50 @@ struct LeaveDaysView: View {
             let holidays = (try? await HolidayService.shared.fetchHolidays()) ?? []
             await NotificationManager.shared.rebuildSchedule(alarms: alarms, leaveDays: days, holidays: holidays)
         }
+    }
+}
+
+struct EditLeaveView: View {
+    @Environment(\.modelContext) private var context
+    @Environment(\.dismiss) private var dismiss
+    @Query private var alarms: [Alarm]
+    @Query private var leaveDays: [LeaveDay]
+    let leaveDay: LeaveDay
+    @State private var startDate: Date
+    @State private var endDate: Date
+    @State private var note: String
+
+    init(leaveDay: LeaveDay) {
+        self.leaveDay = leaveDay
+        _startDate = State(initialValue: leaveDay.date)
+        _endDate = State(initialValue: leaveDay.lastDate)
+        _note = State(initialValue: leaveDay.note)
+    }
+
+    var body: some View {
+        Form {
+            DatePicker("First day", selection: $startDate, displayedComponents: .date)
+            DatePicker("Last day", selection: $endDate, in: startDate..., displayedComponents: .date)
+            TextField("Label", text: $note)
+        }
+        .navigationTitle("Edit Leave")
+        .toolbar {
+            ToolbarItem(placement: .confirmationAction) {
+                Button("Save", action: save)
+                    .disabled(note.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            }
+        }
+    }
+
+    private func save() {
+        leaveDay.date = Calendar.uk.startOfDay(for: startDate)
+        leaveDay.endDate = Calendar.uk.startOfDay(for: endDate)
+        leaveDay.note = note.trimmingCharacters(in: .whitespacesAndNewlines)
+        try? context.save()
+        Task {
+            let holidays = (try? await HolidayService.shared.fetchHolidays()) ?? HolidayService.shared.cachedHolidays()
+            await NotificationManager.shared.rebuildSchedule(alarms: alarms, leaveDays: leaveDays, holidays: holidays)
+        }
+        dismiss()
     }
 }

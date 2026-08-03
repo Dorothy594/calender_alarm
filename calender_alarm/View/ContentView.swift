@@ -89,7 +89,9 @@ struct ContentView: View {
             await NotificationManager.shared.rebuildSchedule(alarms: alarms, leaveDays: leaveDays, holidays: fetched)
         } catch {
             holidayError = "Couldn’t update holidays. Pull to refresh when online."
-            await NotificationManager.shared.rebuildSchedule(alarms: alarms, leaveDays: leaveDays, holidays: [])
+            let cached = HolidayService.shared.cachedHolidays()
+            holidays = cached
+            await NotificationManager.shared.rebuildSchedule(alarms: alarms, leaveDays: leaveDays, holidays: cached)
         }
     }
 

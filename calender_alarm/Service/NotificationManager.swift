@@ -22,7 +22,6 @@ final class NotificationManager {
         center.removePendingNotificationRequests(withIdentifiers: existing.map(\.identifier).filter { $0.hasPrefix(prefix) })
 
         let holidayDates = Set(holidays.compactMap(\.dateValue).map { Calendar.uk.startOfDay(for: $0) })
-        let leaveDates = Set(leaveDays.map { Calendar.uk.startOfDay(for: $0.date) })
         let calendar = Calendar.uk
         let today = calendar.startOfDay(for: Date())
         var requests: [(date: Date, request: UNNotificationRequest)] = []
@@ -34,7 +33,7 @@ final class NotificationManager {
 
             for alarm in alarms where alarm.isEnabled && alarm.repeatDays.contains(weekday) {
                 if alarm.skipHoliday && holidayDates.contains(dayStart) { continue }
-                if alarm.skipLeave && leaveDates.contains(dayStart) { continue }
+                if alarm.skipLeave && leaveDays.contains(where: { $0.contains(dayStart) }) { continue }
                 guard let fireDate = calendar.date(bySettingHour: alarm.hour, minute: alarm.minute, second: 0, of: day), fireDate > Date() else { continue }
 
                 let content = UNMutableNotificationContent()

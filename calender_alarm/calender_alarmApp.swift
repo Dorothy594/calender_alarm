@@ -10,15 +10,18 @@ import SwiftData
 
 @main
 struct SmartAlarmApp: App {
+    @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
+    @Environment(\.scenePhase) private var scenePhase
+
     var body: some Scene {
         WindowGroup {
             ContentView()
         }
-        .modelContainer(
-            for:[
-                Alarm.self,
-                LeaveDay.self
-            ]
-        )
+        .modelContainer(AppData.modelContainer)
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active {
+                BackgroundRefreshManager.shared.scheduleNextRefresh()
+            }
+        }
     }
 }

@@ -5,15 +5,17 @@ struct LeaveDaysView: View {
     @Environment(\.modelContext) private var context
     @Query(sort: \LeaveDay.date) private var leaveDays: [LeaveDay]
     @Query private var alarms: [Alarm]
-    @State private var selectedDate = Date()
+    @State private var startDate = Date()
+    @State private var endDate = Date()
     @State private var note = "Annual leave"
 
     var body: some View {
         List {
-            Section("Add a day off") {
-                DatePicker("Date", selection: $selectedDate, displayedComponents: .date)
+            Section("Add leave period") {
+                DatePicker("First day", selection: $startDate, displayedComponents: .date)
+                DatePicker("Last day", selection: $endDate, in: startDate..., displayedComponents: .date)
                 TextField("Label", text: $note)
-                Button("Add leave day", action: addLeaveDay)
+                Button("Add leave period", action: addLeaveDay)
                     .disabled(note.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
             Section("Scheduled leave") {
@@ -22,7 +24,7 @@ struct LeaveDaysView: View {
                 }
                 ForEach(leaveDays) { leaveDay in
                     VStack(alignment: .leading) {
-                        Text(leaveDay.date.formatted(date: .long, time: .omitted))
+                        Text(leaveDay.date.formatted(date: .long, time: .omitted) + " – " + leaveDay.lastDate.formatted(date: .long, time: .omitted))
                         Text(leaveDay.note).font(.caption).foregroundStyle(.secondary)
                     }
                 }
@@ -33,7 +35,7 @@ struct LeaveDaysView: View {
     }
 
     private func addLeaveDay() {
-        let leaveDay = LeaveDay(date: selectedDate, note: note.trimmingCharacters(in: .whitespacesAndNewlines))
+        let leaveDay = LeaveDay(date: startDate, endDate: endDate, note: note.trimmingCharacters(in: .whitespacesAndNewlines))
         context.insert(leaveDay)
         note = "Annual leave"
         rebuildSchedule(with: leaveDays + [leaveDay])
